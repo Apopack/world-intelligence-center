@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Frontend - React application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - wic-network
+
+  # Backend - Node.js/Express API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/wic
+      - JWT_SECRET=your_jwt_secret_key_here
+      - AI_SERVICE_URL=http://ai-service:8000
+      - AI_API_KEY=your_ai_api_key_here
+    depends_on:
+      - mongo
+      - ai-service
+    networks:
+      - wic-network
+
+  # AI Service - Python/FastAPI
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app
+    environment:
+      - OPENAI_API_KEY=your_openai_api_key_here
+      - NEWS_API_KEY=your_news_api_key_here
+      - AI_API_KEY=your_ai_api_key_here
+    networks:
+      - wic-network
+
+  # MongoDB Database
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - wic-network
+    environment:
+      - MONGO_INITDB_DATABASE=wic
+
+  # Redis for caching
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - wic-network
+
+networks:
+  wic-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
